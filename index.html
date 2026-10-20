@@ -1,0 +1,19 @@
+<!doctype html>
+<html lang="uk">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Просторова VR-сцена — інтерактивний стенд</title>
+    <script src="https://aframe.io/releases/1.8.0/aframe.min.js"></script>
+    <script src="dashboard.js" defer></script>
+  </head>
+  <body>
+    <a-scene>
+      <a-box id="cube" data-editor-name="Куб" position="0 0.5 -4" rotation="0 0 0" scale="1 1 1" color="#F2766B"></a-box>
+      <a-sphere id="sphere" data-editor-name="Куля" position="-2.3 0.55 -4.5" rotation="0 0 0" scale="1 1 1" radius="0.55" color="#E9B44C"></a-sphere>
+      <a-cylinder id="cylinder" data-editor-name="Циліндр" position="2.3 0.65 -5" rotation="0 0 0" scale="1 1 1" radius="0.43" height="1.3" color="#147D91"></a-cylinder>
+      <a-plane position="0 0 -4" rotation="-90 0 0" width="12" height="14" color="#C9E6D4"></a-plane>
+      <a-sky color="#EAF4FF"></a-sky>
+    </a-scene>
+  </body>
+</html>
