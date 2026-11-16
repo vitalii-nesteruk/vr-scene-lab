@@ -10,12 +10,64 @@
     let objects = [...originalObjects];
     let selected = objects[0];
     let drag = null;
+    let hovered = null;
     let nextId = 1;
     const defaults = new Map();
     const pending = new Set();
     const drafts = new Map();
     const codeErrors = new Map();
     const animations = new Map();
+    const jumps = new Map();
+    const jsDrafts = new Map();
+    const handlers = new Map();
+    const starterJS = el => `// Знаходимо фігуру за її id у HTML.
+const figure = document.querySelector("#${el.id}");
+
+// Запам’ятовуємо початкове положення під час стрибка.
+let startPosition = null;
+
+function cancelJump() {
+  if (!startPosition) return;
+  figure.removeEventListener('animationcomplete__jump', cancelJump);
+  figure.removeAttribute('animation__jump');
+  figure.setAttribute('position', startPosition);
+  startPosition = null;
+}
+
+function jump(height, duration) {
+  cancelJump();
+  const {x, y, z} = figure.getAttribute('position');
+  startPosition = {x, y, z};
+  // A-Frame анімує підйом і повернення.
+  figure.setAttribute('animation__jump', {
+    property: 'position',
+    from: \`\${x} \${y} \${z}\`,
+    to: \`\${x} \${y + height} \${z}\`,
+    dur: duration, loop: 2, dir: 'alternate',
+    easing: 'easeInOutSine'
+  });
+  figure.addEventListener('animationcomplete__jump', cancelJump, {once: true});
+}
+
+// Обробник викликається, коли користувач клацає фігуру.
+function onClick(event) {
+  jump(1, 350);
+}
+
+// Прив’язуємо подію до функції-обробника.
+figure.addEventListener('click', onClick);
+
+figure.addEventListener('mouseenter', () => {
+  figure.setAttribute('color', '#ffcc00');
+});
+
+figure.addEventListener('mouseleave', () => {
+  figure.setAttribute('color', '#e9b44c');
+});
+
+// Події переміщення, які надсилає редактор:
+// figure.addEventListener('vr-drag-start', () => { ... });
+// figure.addEventListener('vr-drag-end', () => { ... });`;
     let shadowsEnabled = false;
     let geometryOwner = null;
     const fields = [
@@ -94,7 +146,7 @@
       .vr-code-message.is-error { color: #a32924; }
       .vr-code-actions { display: flex; gap: 6px; }
       .vr-code-actions button { flex: 1; padding: 6px; }
-      .vr-code-actions [data-apply-code] { background: #006e77; color: white; }
+      .vr-code-actions [data-apply-code], .vr-code-actions [data-js-apply] { background: #006e77; color: white; }
       .vr-field input[type="range"] { display: block; width: 100%; margin: 7px 0 0; accent-color: #006e77; }
       .vr-color { display: flex; align-items: center; justify-content: space-between; gap: 15px; font-size: 13px; }
       .vr-color input { width: 72px; height: 36px; padding: 1px; border: 1px solid #98c1bf; border-radius: 5px; background: white; }
@@ -128,6 +180,8 @@
       <details><summary>Розміри фігури · метри</summary><div class="vr-dimensions"></div></details>
       <label class="vr-color">Колір <input type="color" data-color aria-label="Колір обраного об’єкта"></label>
       <details data-effects><summary>Тіні й анімація</summary>
+        <label class="vr-effect">Стрибок за кліком <input type="checkbox" data-click-jump></label>
+        <p class="vr-tip">Увімкни й клацни фігуру: вона підстрибне та повернеться. Перетягування рухає її по сцені.</p>
         <label class="vr-effect">Тіні в усій сцені <input type="checkbox" data-shadows></label>
         <label class="vr-effect">Анімація фігури <select data-animation-kind data-animation-control>
           <option value="none">Без анімації</option><option value="spin">Обертання</option>
@@ -138,13 +192,53 @@
           <input type="range" min="1" max="10" step="0.5" value="4" data-animation-duration data-animation-control aria-label="Тривалість анімації в секундах">
         </label>
         <button type="button" class="vr-stop" data-stop-animation data-animation-control>Зупинити рух</button>
-        <p class="vr-tip">Клік по рухомій фігурі або зміна її положення, повороту чи масштабу зупиняє рух. Обертання найкраще видно на кубі.</p>
+        <p class="vr-tip">Клік по фігурі зупиняє її безперервну анімацію; якщо ввімкнено стрибок, запускає його. Обертання найкраще видно на кубі.</p>
+      </details>
+      <details data-practice><summary>Практична: інтерактивна виставка</summary>
+        <p class="vr-tip"><strong>Задум:</strong> створи виставку дивних експонатів, які реагують на відвідувача. Працюй із готовими фігурами й прикладами коду.</p>
+        <ol class="vr-tip">
+          <li>Обери тему й розмісти 3 фігури. Виділи головний експонат.</li>
+          <li>Додай безперервну анімацію одному експонату через «Тіні й анімація». Порівняй дві тривалості.</li>
+          <li>Обери іншу фігуру, відкрий «JavaScript: реакції фігури» й натисни «Застосувати JS». Знайди document.querySelector, функцію onClick та її підписку addEventListener. Перевір стрибок за кліком і зміну кольору при наведенні та відведенні миші. Зміни висоту у виклику jump(1, 350) або кольори в готових функціях.</li>
+          <li>Перевір усі реакції. Рухомий експонат має залишатися помітним, а підказка кольором — зрозумілою. Обирай рухому фігуру через список, щоб не зупиняти її кліком.</li>
+          <li>Зроби скриншот і запиши: яка подія запускає яку дію? Як тривалість впливає на швидкість? Покажи реакції вчителю або запиши коротке відео.</li>
+        </ol>
+        <p class="vr-tip">Додатково: зміни колір фігури на початку й після завершення перетягування. Визначення jump можна поки залишити готовим — для вправи достатньо змінювати її виклик.</p>
+        <p class="vr-tip">Хочеш попрацювати у файлах? <a href="https://github.com/vitalii-nesteruk/vr-scene-lab" target="_blank" rel="noopener noreferrer">Репозиторій на GitHub</a>: Code → Download ZIP, потім розпакуй архів. Відкрий student/index.html у браузері, а student/interactions.js — у редакторі коду (наприклад, <a href="https://code.visualstudio.com/download" target="_blank" rel="noopener noreferrer">VS Code</a>). Збережи зміни й онови браузер. Інтернет потрібен для A-Frame.</p>
+        <p class="vr-tip"><a href="student/index.html" target="_blank" rel="noopener noreferrer">Відкрити учнівський приклад</a>. Файли student/ призначені для твоїх змін; app/ містить панель, lib/ — готові допоміжні функції.</p>
+        <p class="vr-tip">Збережи скриншот і потрібний JS до перезавантаження: сцена та код автоматично не зберігаються.</p>
+      </details>
+      <details data-event-guide><summary>Довідка: події користувача</summary>
+        <p class="vr-tip">Приклад: обери фігуру, зареєструй обробник і визнач дію.</p>
+        <pre class="vr-code">const figure = document.querySelector('#sphere');
+
+function highlight(event) {
+  figure.setAttribute('color', '#ffcc00');
+}
+
+figure.addEventListener('mouseenter', highlight);</pre>
+        <p class="vr-tip">Подія — що зробив користувач. Обробник — функція, яку панель викликає у відповідь для цієї фігури.</p>
+        <ul class="vr-tip">
+          <li><code>'click'</code> — короткий клік: наприклад, стрибок.</li>
+          <li><code>'mouseenter'</code> — навів вказівник: виділити кольором.</li>
+          <li><code>'mouseleave'</code> — відвів вказівник: повернути колір.</li>
+          <li><code>'vr-drag-start'</code> — почав тягнути: позначити переміщення.</li>
+          <li><code>'vr-drag-end'</code> — відпустив після перетягування: показати завершення.</li>
+        </ul>
+        <p class="vr-tip">У функціях можна використати <code>figure.setAttribute('color', '#ff0000');</code>. У цьому редакторі панель надсилає події на 3D-фігури; addEventListener підписує на них ваші функції. vr-drag-start та vr-drag-end — події нашого редактора. Саме перетягування не запускає click. Почни з миші на комп’ютері.</p>
+      </details>
+      <details data-js-editor><summary>JavaScript: реакції фігури</summary>
+        <p class="vr-tip">Селектор знаходить фігуру за id з HTML. addEventListener прив’язує обробники до подій фігури. Зміни код і натисни «Застосувати JS».</p>
+        <textarea class="vr-code" data-js-code aria-label="JavaScript обраної фігури" spellcheck="false" autocapitalize="off"></textarea>
+        <div class="vr-code-actions"><button type="button" data-js-apply>Застосувати JS</button><button type="button" data-js-clear>Прибрати реакцію</button></div>
+        <p class="vr-code-message" data-js-message role="status" aria-live="polite"></p>
+        <p class="vr-tip">JS запускається у цій сторінці: застосовуй лише код, якому довіряєш. Перетягування не запускає клік.</p>
       </details>
       <h2>HTML обраної фігури</h2>
       <p class="vr-tip">Зміни параметри й натисни «Застосувати» або ⌘/Ctrl+Enter.</p>
       <textarea class="vr-code" aria-label="HTML обраної фігури" spellcheck="false" autocapitalize="off" autocomplete="off"></textarea>
       <div class="vr-code-actions"><button type="button" data-apply-code>Застосувати</button><button type="button" data-reset-camera>Скинути камеру</button></div>
-      <p class="vr-code-message" role="status" aria-live="polite"></p>
+      <p class="vr-code-message" data-html-message role="status" aria-live="polite"></p>
       <div class="vr-actions"><button type="button" data-reset="one">Скинути обраний</button><button type="button" data-reset="all">Початкова сцена</button><button type="button" data-remove>Прибрати фігуру</button></div>
       <p class="vr-tip">Клік вибирає фігуру. Перетягування змінює x і z, зберігаючи висоту. Тягни порожнє місце, щоб озирнутися. Після збільшення фігури перевір її опору на підлогу.</p>
     `;
@@ -161,8 +255,10 @@
     const objectBar = panel.querySelector('.vr-objects');
     const geometryBox = panel.querySelector('.vr-dimensions');
     const colorInput = panel.querySelector('[data-color]');
-    const code = panel.querySelector('.vr-code');
-    const codeMessage = panel.querySelector('.vr-code-message');
+    const code = panel.querySelector('textarea.vr-code:not([data-js-code])');
+    const jsCode = panel.querySelector('[data-js-code]');
+    const jsMessage = panel.querySelector('[data-js-message]');
+    const codeMessage = panel.querySelector('[data-html-message]');
     const status = panel.querySelector('.vr-status');
     const animationKind = panel.querySelector('[data-animation-kind]');
     const animationDuration = panel.querySelector('[data-animation-duration]');
@@ -199,6 +295,8 @@
     scene.append(sunLight);
     scene.setAttribute('shadow', 'type: pcf');
     scene.querySelectorAll('a-sky').forEach(el => el.setAttribute('shadow', 'cast: false; receive: false'));
+    const jumpToggle = panel.querySelector('[data-click-jump]');
+    jumpToggle.addEventListener('change', () => { if (!jumpToggle.checked) [...jumps.keys()].forEach(stopJump); refresh(); });
     shadowToggle.addEventListener('change', () => { setShadows(shadowToggle.checked); refresh(); });
     animationKind.addEventListener('change', () => {
       if (!selected || animationKind.value === 'custom') return;
@@ -237,6 +335,7 @@
           return;
         }
         control.setCustomValidity('');
+        stopJump(selected);
         stopAnimation(selected);
         const changed = {...current(field.group)};
         if (field.key === 'size') changed.x = changed.y = changed.z = value;
@@ -258,6 +357,39 @@
       resizeCode();
       updateCodeMessage();
     });
+    jsCode.addEventListener('input', () => { if (selected) { jsDrafts.set(selected.id, jsCode.value); resizeCode(); jsMessage.textContent = 'Зміни ще не застосовано.'; } });
+    panel.querySelector('[data-js-apply]').addEventListener('click', () => {
+      if (!selected) return;
+      const el = selected;
+      const staged = [];
+      const originalAdd = el.addEventListener;
+      el.addEventListener = function(type, listener, options) {
+        if (!['click', 'mouseenter', 'mouseleave', 'vr-drag-start', 'vr-drag-end'].includes(type)) throw new Error('Вибери подію з довідки');
+        if (typeof listener !== 'function') throw new Error('Обробник має бути функцією');
+        staged.push({type, listener, options});
+      };
+      try {
+        const make = new Function('jump', `"use strict";\n${jsCode.value}\n;return {cancelJump: typeof cancelJump === 'function' ? cancelJump : null, target: typeof figure === 'undefined' ? null : figure, onClick: typeof onClick === 'function' ? onClick : null, onMouseEnter: typeof onMouseEnter === 'function' ? onMouseEnter : null, onMouseLeave: typeof onMouseLeave === 'function' ? onMouseLeave : null, onDragStart: typeof onDragStart === 'function' ? onDragStart : null, onDragEnd: typeof onDragEnd === 'function' ? onDragEnd : null};`);
+        const handler = make((height, duration) => jumpOnClick(el, height, duration));
+        if (handler.target !== el) throw new Error('Селектор figure має вказувати на обрану фігуру');
+        if (!staged.length && !['onClick', 'onMouseEnter', 'onMouseLeave', 'onDragStart', 'onDragEnd'].some(name => typeof handler[name] === 'function')) throw new Error('Додай функцію onClick, onMouseEnter, onMouseLeave, onDragStart або onDragEnd.');
+        el.addEventListener = originalAdd;
+        clearHandlers(el);
+        handler.listeners = staged.map(({type, listener, options}) => {
+          const wrapped = event => {
+            try { listener.call(el, event); if (selected === el) refresh(); }
+            catch (error) { jsMessage.textContent = 'Помилка ' + type + ': ' + error.message; }
+          };
+          originalAdd.call(el, type, wrapped, options);
+          return {type, wrapped, options};
+        });
+        handlers.set(el.id, handler); jsDrafts.set(el.id, jsCode.value);
+        jsMessage.textContent = 'Готово. Спробуй реакції цієї фігури у сцені.';
+      } catch (error) { jsMessage.textContent = `Помилка: ${error.message}. Попередню реакцію збережено.`; }
+      finally { el.addEventListener = originalAdd; }
+    });
+    panel.querySelector('[data-js-clear]').addEventListener('click', () => { if (!selected) return; clearHandlers(selected); jsDrafts.delete(selected.id); refresh(); });
+    panel.querySelector('[data-js-editor]').addEventListener('toggle', resizeCode);
     window.addEventListener('resize', resizeCode);
     code.addEventListener('keydown', event => {
       if ((event.ctrlKey || event.metaKey) && event.key === 'Enter') {
@@ -282,10 +414,13 @@
     panel.querySelector('[data-reset="one"]').addEventListener('click', () => { reset(selected); refresh(); });
     panel.querySelector('[data-reset="all"]').addEventListener('click', () => {
       finishDrag();
-      for (const el of objects) el.remove();
+      hovered = null;
+      for (const el of objects) { clearHandlers(el); el.remove(); }
       for (const el of pending) el.remove();
       pending.clear();
       drafts.clear();
+      jsDrafts.clear();
+      handlers.clear();
       codeErrors.clear();
       defaults.clear();
       animations.clear();
@@ -299,10 +434,14 @@
     panel.querySelector('[data-remove]').addEventListener('click', () => {
       if (!selected) return;
       finishDrag();
+      stopJump(selected);
+      if (hovered === selected) hovered = null;
       const index = objects.indexOf(selected);
       objects = objects.filter(el => el !== selected);
       defaults.delete(selected.id);
       drafts.delete(selected.id);
+      jsDrafts.delete(selected.id);
+      clearHandlers(selected);
       codeErrors.delete(selected.id);
       animations.delete(selected.id);
       selected.remove();
@@ -318,9 +457,12 @@
       defaults.set(el.id, values);
     }
     function reset(el) {
+      if (el) stopJump(el);
       if (!el) return;
       stopAnimation(el);
       drafts.delete(el.id);
+      jsDrafts.delete(el.id);
+      clearHandlers(el);
       codeErrors.delete(el.id);
       for (const [key, value] of Object.entries(defaults.get(el.id))) el.setAttribute(key, value);
       applyObjectShadow(el);
@@ -337,7 +479,7 @@
       }
     }
     function refresh() {
-      panel.querySelectorAll('.vr-fields input, .vr-dimensions input, [data-color], .vr-code, [data-apply-code], [data-reset="one"], [data-remove], [data-animation-control]')
+      panel.querySelectorAll('.vr-fields input, .vr-dimensions input, [data-color], .vr-code, [data-apply-code], [data-reset="one"], [data-remove], [data-animation-control], [data-js-code], [data-js-apply], [data-js-clear]')
         .forEach(control => { control.disabled = !selected; });
       shadowToggle.checked = shadowsEnabled;
       const motion = selected && animations.get(selected.id);
@@ -355,6 +497,8 @@
         geometryOwner = null;
         geometryBox.replaceChildren();
         panel.querySelectorAll('[data-number]').forEach(input => { input.value = ''; });
+        jsCode.value = '';
+        jsMessage.textContent = 'Додай фігуру, щоб налаштувати реакцію.';
         code.value = '';
         code.placeholder = 'Додай фігуру, щоб редагувати її HTML.';
         resizeCode();
@@ -364,6 +508,9 @@
         status.textContent = 'У сцені немає фігур.';
         return;
       }
+      const jsValue = jsDrafts.get(selected.id) ?? starterJS(selected);
+      if (jsCode.value !== jsValue) { jsCode.value = jsValue; resizeCode(); }
+      jsMessage.textContent = handlers.has(selected.id) ? 'Реакцію застосовано до цієї фігури.' : 'Приклад ще не застосовано.';
       code.placeholder = '';
       for (const button of objectBar.querySelectorAll('button')) {
         button.setAttribute('aria-pressed', String(button.dataset.object === selected.id));
@@ -452,7 +599,47 @@
       animations.delete(el.id);
       for (const [key, value] of Object.entries(pose)) el.setAttribute(key, vector(value));
     }
+    function stopJump(el) {
+      handlers.get(el.id)?.cancelJump?.();
+      const jump = jumps.get(el);
+      if (!jump) return;
+      jumps.delete(el);
+      el.removeEventListener("animationcomplete__jump", jump.done);
+      el.removeAttribute("animation__jump");
+      el.setAttribute("position", vector(jump.position));
+    }
+    function clearHandlers(el) {
+      stopJump(el);
+      const handler = handlers.get(el.id);
+      for (const item of handler?.listeners ?? []) el.removeEventListener(item.type, item.wrapped, item.options);
+      handlers.delete(el.id);
+    }
+    function runHandler(el, name) {
+      const type = {onClick: 'click', onMouseEnter: 'mouseenter', onMouseLeave: 'mouseleave', onDragStart: 'vr-drag-start', onDragEnd: 'vr-drag-end'}[name];
+      const listeners = handlers.get(el.id)?.listeners;
+      if (listeners?.length) {
+        const handled = listeners.some(item => item.type === type);
+        el.dispatchEvent(new CustomEvent(type, {detail: {figure: el}}));
+        return handled;
+      }
+      const fn = handlers.get(el.id)?.[name];
+      if (!fn) return false;
+      try { fn(el); if (selected === el) refresh(); }
+      catch (error) { jsMessage.textContent = `Помилка ${name}: ${error.message}`; }
+      return true;
+    }
+    function jumpOnClick(el, height = 1, duration = 350) {
+      if (!Number.isFinite(height) || !Number.isFinite(duration) || duration <= 0) throw new Error("jump: висота має бути числом, тривалість — додатним числом у мс");
+      stopJump(el);
+      stopAnimation(el);
+      const position = {...el.getAttribute("position")};
+      const done = () => { stopJump(el); if (selected === el) refresh(); };
+      jumps.set(el, {position, done});
+      el.addEventListener("animationcomplete__jump", done);
+      el.setAttribute("animation__jump", `property: position; from: ${vector(position)}; to: ${vector({...position, y: position.y + height})}; dur: ${duration}; loop: 2; dir: alternate; easing: easeInOutSine`);
+    }
     function startAnimation(el, kind, seconds, custom = null) {
+      stopJump(el);
       stopAnimation(el, true);
       const base = readPose(el);
       let config;
@@ -521,9 +708,12 @@
       if (!code.getClientRects().length) return;
       const scrollTop = panel.scrollTop;
       // Спочатку стискаємо поле, щоб воно могло також зменшуватися після видалення рядків.
-      code.style.height = '0px';
-      const frame = code.offsetHeight - code.clientHeight;
-      code.style.height = `${code.scrollHeight + frame}px`;
+      for (const editor of [code, jsCode]) {
+        if (!editor.getClientRects().length) continue;
+        editor.style.height = '0px';
+        const frame = editor.offsetHeight - editor.clientHeight;
+        editor.style.height = `${editor.scrollHeight + frame}px`;
+      }
       panel.scrollTop = scrollTop;
     }
     function serialize(el) {
@@ -531,6 +721,7 @@
       const motion = animations.get(el.id);
       const shadow = el.getAttribute('shadow');
       return [`<${tag}`,
+        `  id="${el.id}"`,
         ...dimensions[kindOf(el)].map(([key]) => `  ${key}="${dimensionValue(el, key)}"`),
         ...['position', 'rotation', 'scale'].map(key => `  ${key}="${vector(motion?.base[key] ?? el.getAttribute(key))}"`),
         ...(shadow?.cast || shadow?.receive ? [`  shadow="cast: ${shadow.cast}; receive: ${shadow.receive}"`] : []),
@@ -545,6 +736,7 @@
       code.setAttribute('aria-invalid', String(Boolean(error)));
     }
     function applyCode() {
+      if (selected) stopJump(selected);
       if (!selected) return;
       const text = code.value.trim();
       try {
@@ -553,7 +745,7 @@
         const root = doc.documentElement;
         if (root.tagName !== selected.tagName.toLowerCase()) throw new Error(`Зараз обрано <${selected.tagName.toLowerCase()}>. Для іншого типу додай нову фігуру.`);
         if (root.children.length || root.textContent.trim()) throw new Error('Тут редагуємо одну фігуру без вкладених тегів і тексту.');
-        const allowed = new Set(['position', 'rotation', 'scale', 'color', 'animation', 'shadow', ...dimensions[kindOf(selected)].map(([key]) => key)]);
+        const allowed = new Set(['id', 'position', 'rotation', 'scale', 'color', 'animation', 'shadow', ...dimensions[kindOf(selected)].map(([key]) => key)]);
         const changes = [];
         let motionConfig = null;
         let shadowConfig = null;
@@ -561,7 +753,9 @@
         for (const attr of root.attributes) {
           const {name, value} = attr;
           if (!allowed.has(name)) throw new Error(`Параметр «${name}» тут не підтримується. Змінюй перетворення, колір, розміри, shadow або animation.`);
-          if (name === 'animation') {
+          if (name === 'id') {
+            if (value !== selected.id) throw new Error('id змінити не можна: він пов’язує фігуру з її JS.');
+          } else if (name === 'animation') {
             motionConfig = parseAnimation(value);
           } else if (name === 'shadow') {
             shadowConfig = parseShadow(value);
@@ -657,6 +851,7 @@
       cast(event);
       const el = pick();
       if (!el) return;
+      stopJump(el);
       stopAnimation(el);
       selected = el;
       refresh();
@@ -665,7 +860,7 @@
       const point = raycaster.ray.intersectPlane(dragPlane, hitPoint);
       if (!point) return;
       const look = scene.camera.el?.components['look-controls'];
-      drag = {id: event.pointerId, el, start, offset: new THREE.Vector3(start.x, start.y, start.z).sub(point), look, lookEnabled: look?.data.enabled};
+      drag = {id: event.pointerId, el, start, clientX: event.clientX, clientY: event.clientY, moved: false, offset: new THREE.Vector3(start.x, start.y, start.z).sub(point), look, lookEnabled: look?.data.enabled};
       if (look) look.el.setAttribute('look-controls', 'enabled', false);
       canvas.setPointerCapture(event.pointerId);
       canvas.style.cursor = 'grabbing';
@@ -674,8 +869,11 @@
     }, {capture: true});
     canvas.addEventListener('pointermove', event => {
       cast(event);
-      if (!drag) { canvas.style.cursor = pick() ? 'grab' : ''; return; }
+      if (!drag) { const next = pick(); canvas.style.cursor = next ? 'grab' : ''; if (next !== hovered) { if (hovered) runHandler(hovered, 'onMouseLeave'); hovered = next; if (hovered) runHandler(hovered, 'onMouseEnter'); } return; }
       if (event.pointerId !== drag.id) return;
+      if (Math.hypot(event.clientX - drag.clientX, event.clientY - drag.clientY) < 5 && !drag.moved) return;
+      if (!drag.moved) runHandler(drag.el, 'onDragStart');
+      drag.moved = true;
       const point = raycaster.ray.intersectPlane(dragPlane, hitPoint);
       if (point) {
         point.add(drag.offset);
@@ -689,10 +887,15 @@
     }, {capture: true});
     canvas.addEventListener('pointerup', event => {
       if (!drag || event.pointerId !== drag.id) return;
+      const clicked = !drag.moved ? drag.el : null;
+      const moved = drag.moved ? drag.el : null;
       finishDrag();
+      if (moved) runHandler(moved, 'onDragEnd');
+      if (clicked && !runHandler(clicked, 'onClick') && jumpToggle.checked) jumpOnClick(clicked);
       event.preventDefault();
       event.stopImmediatePropagation();
     }, {capture: true});
+    canvas.addEventListener('pointerleave', () => { if (!drag && hovered) { runHandler(hovered, 'onMouseLeave'); hovered = null; } });
     canvas.addEventListener('pointercancel', () => finishDrag(true));
     canvas.addEventListener('lostpointercapture', () => finishDrag());
     window.addEventListener('blur', () => finishDrag());
