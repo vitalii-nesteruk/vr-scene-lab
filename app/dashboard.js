@@ -199,7 +199,7 @@ figure.addEventListener('mouseleave', () => {
         <ol class="vr-tip">
           <li>Обери тему й розмісти 3 фігури. Виділи головний експонат.</li>
           <li>Додай безперервну анімацію одному експонату через «Тіні й анімація». Порівняй дві тривалості.</li>
-          <li>Обери іншу фігуру, відкрий «JavaScript: реакції фігури» й натисни «Застосувати JS». Знайди document.querySelector, функцію onClick та її підписку addEventListener. Перевір стрибок за кліком і зміну кольору при наведенні та відведенні миші. Зміни висоту у виклику jump(1, 350) або кольори в готових функціях.</li>
+          <li>Обери іншу фігуру, відкрий «JavaScript: реакції фігури» й натисни «Застосувати JS». Скористайся довідкою «Спочатку: як код знаходить фігуру». Знайди document.querySelector, функцію onClick та її підписку addEventListener. Перевір стрибок за кліком і зміну кольору при наведенні та відведенні миші. Зміни висоту у виклику jump(1, 350) або кольори в готових функціях.</li>
           <li>Перевір усі реакції. Рухомий експонат має залишатися помітним, а підказка кольором — зрозумілою. Обирай рухому фігуру через список, щоб не зупиняти її кліком.</li>
           <li>Зроби скриншот і запиши: яка подія запускає яку дію? Як тривалість впливає на швидкість? Покажи реакції вчителю або запиши коротке відео.</li>
         </ol>
@@ -207,6 +207,18 @@ figure.addEventListener('mouseleave', () => {
         <p class="vr-tip">Хочеш попрацювати у файлах? <a href="https://github.com/vitalii-nesteruk/vr-scene-lab" target="_blank" rel="noopener noreferrer">Репозиторій на GitHub</a>: Code → Download ZIP, потім розпакуй архів. Відкрий student/index.html у браузері, а student/interactions.js — у редакторі коду (наприклад, <a href="https://code.visualstudio.com/download" target="_blank" rel="noopener noreferrer">VS Code</a>). Збережи зміни й онови браузер. Інтернет потрібен для A-Frame.</p>
         <p class="vr-tip"><a href="student/index.html" target="_blank" rel="noopener noreferrer">Відкрити учнівський приклад</a>. Файли student/ призначені для твоїх змін; app/ містить панель, lib/ — готові допоміжні функції.</p>
         <p class="vr-tip">Збережи скриншот і потрібний JS до перезавантаження: сцена та код автоматично не зберігаються.</p>
+      </details>
+      <details data-selector-guide><summary>Спочатку: як код знаходить фігуру</summary>
+        <p class="vr-tip">HTML описує фігури сцени, JavaScript задає реакції. Селектор — це запис, за яким код знаходить потрібний елемент на сторінці.</p>
+        <pre class="vr-code">// HTML: у кулі є ім’я-ідентифікатор sphere.
+&lt;a-sphere id="sphere" …&gt;&lt;/a-sphere&gt;
+
+// JavaScript: знаходимо саме цю кулю.
+const figure = document.querySelector('#sphere');</pre>
+        <p class="vr-tip"><code>id="sphere"</code> — унікальний ідентифікатор фігури. <code>#sphere</code> означає «елемент із таким id»; # пишемо в селекторі, а не в id. <code>document.querySelector(...)</code> шукає перший відповідний елемент. <code>figure</code> — назва змінної, у якій зберігаємо знайдену фігуру.</p>
+        <p class="vr-tip">Для куба приклад — <code>#cube</code>. Для доданої фігури подивись id у полі «HTML обраної фігури»: її JS-приклад уже містить потрібний селектор. Якщо написати неіснуючий id, фігура не знайдеться. У кожного об’єкта має бути власний id.</p>
+        <p class="vr-tip">На майбутнє: <code>.interactive</code> шукає за класом, <code>a-sphere</code> — за назвою тега. Клас може об’єднувати кілька фігур; querySelector повертає першу. Для цієї роботи достатньо селектора за id.</p>
+        <p class="vr-tip">Далі <code>figure.addEventListener('click', onClick)</code> означає: «коли по цій фігурі клацнуть, виконай функцію onClick». Ця функція — обробник події; усередині неї описуємо дію.</p>
       </details>
       <details data-event-guide><summary>Довідка: події користувача</summary>
         <p class="vr-tip">Приклад: обери фігуру, зареєструй обробник і визнач дію.</p>
